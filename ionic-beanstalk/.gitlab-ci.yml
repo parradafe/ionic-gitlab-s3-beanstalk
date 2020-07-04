@@ -1,0 +1,82 @@
+cache:
+  paths:
+    - node_modules/
+
+
+stages:
+  - install-dependencies
+  - build
+  - deploy
+  - .post
+
+install-dependencies:
+  stage: install-dependencies
+  cache: 
+    key: main_modules
+    paths:
+      - node_modules/
+  script:
+    - npm install
+  only:
+    changes:
+      - package-lock.json
+
+build:
+  stage: build
+  cache: 
+    key: $CI_COMMIT_REF_SLUG-$CI_PROJECT_DIR
+    paths:
+      - node_modules/
+    policy: pull
+  allow_failure: false
+  script:
+    - ls
+    - echo $CI_PROJECT_DIR
+    - if [ ! -d /node_modules ]; then echo "ready to install"; npm install; fi
+    - npm run build
+    - cd www
+    - zip -r www.zip ./
+    - cd ..
+    - mkdir release
+    - mv www/www.zip release
+  artifacts:
+    paths:
+      - release
+  only:
+    - release/dev
+    - release/qa
+    
+deploy-dev:
+  stage: deploy
+  needs: 
+    - job: build
+  allow_failure: false
+  script:
+    - echo $APP_LOCATION_FOLDER
+    - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+    - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+    - aws configure set region $AWS_REGION
+    - aws s3 cp release/www.zip $APP_LOCATION/www-$CI_PIPELINE_ID.zip
+    - aws elasticbeanstalk create-application-version --application-name  $APP_NAME --version-label www-$CI_PIPELINE_ID --source-bundle S3Bucket=$APP_LOCATION_BUCKET,S3Key=$APP_LOCATION_FOLDER/www-$CI_PIPELINE_ID.zip
+    - aws elasticbeanstalk update-environment --application-name $APP_NAME --environment-name $APP_ENV_NAME --version-label www-$CI_PIPELINE_ID
+  when: manual
+  only:
+    - release/dev
+
+deploy-qa:
+  stage: deploy
+  needs: 
+    - job: build
+  allow_failure: false
+  script:
+    - aws configure set aws_access_key_id $AWS_ACCESS_KEY_ID
+    - aws configure set aws_secret_access_key $AWS_SECRET_ACCESS_KEY
+    - aws configure set region $AWS_REGION
+    - aws s3 cp release/www.zip $APP_LOCATION_QA/www-$CI_PIPELINE_ID.zip
+    - aws elasticbeanstalk create-application-version --application-name  $APP_NAME_QA --version-label www-$CI_PIPELINE_ID --source-bundle S3Bucket=$APP_LOCATION_BUCKET_QA,S3Key=$APP_LOCATION_FOLDER_QA/www-$CI_PIPELINE_ID.zip
+    - aws elasticbeanstalk update-environment --application-name $APP_NAME_QA --environment-name $APP_ENV_NAME_QA --version-label www-$CI_PIPELINE_ID
+  when: manual
+  only:
+    - release/qa
+
+
