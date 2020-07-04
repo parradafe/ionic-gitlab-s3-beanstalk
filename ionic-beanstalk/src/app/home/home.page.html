@@ -1,0 +1,31 @@
+<ion-header [translucent]="true">
+  <ion-toolbar>
+    <ion-title>
+      Blank
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-content>
+    <ion-grid>
+      <ion-row class="mt-5">
+        <ion-col size="12" offset="0.5">
+          <ion-label class="font-size-15">
+            Login
+          </ion-label>
+        </ion-col>
+      </ion-row>
+      <ion-row>
+        <ion-col class="label-center mt-15 question">
+          <ion-label>
+            Whats your mode
+          </ion-label>
+        </ion-col>
+      </ion-row>
+      <!-- moods list -->
+      <app-mood *ngFor="let m of moods" [mood]="m.mood" [icon]="m.icon"></app-mood>
+    </ion-grid>
+  </ion-content>
+
+</ion-content>
